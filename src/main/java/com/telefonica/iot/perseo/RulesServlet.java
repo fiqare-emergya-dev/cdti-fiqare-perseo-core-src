@@ -196,7 +196,7 @@ public class RulesServlet extends HttpServlet {
             TimeRulesStore.getInstance().removeTimeRule(ruleName.substring(1));
 
             response.setStatus(r.getStatusCode());
-            response.getOutputStream().print(r.getMessage());           
+            response.getOutputStream().print(Encode.forHtmlContent(r.getMessage()));           
         }catch(Exception je) {        				
 			logger.error(String.format("error: %s" ,je));
 			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);

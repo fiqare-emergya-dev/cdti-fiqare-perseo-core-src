@@ -29,6 +29,8 @@ import java.util.ResourceBundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.espertech.esper.core.context.util.ContextMergeViewForwarding;
+
 /**
  *
  * @author brox
@@ -41,7 +43,7 @@ public final class Configuration {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Configuration.class);
 
-    private static final String DEFAULT_PERSEO_FE_URL = "http://127.0.0.1:9090";
+    private static final String DEFAULT_PERSEO_FE_URL = ResourceBundle.getBundle("perseo-core").getString("fe.url");
     private static final long DEFAULT_MAX_AGE = 60000;
     private static final String PERSEO_FE_URL_ENV = "PERSEO_FE_URL";
     private static final String PERSEO_MAX_AGE_ENV = "MAX_AGE";
@@ -74,7 +76,7 @@ public final class Configuration {
         // Check configuration file. If exist, set as default configuration for perseo-core
         try {
             PROPERTIES.clear();
-            stream = new FileInputStream(PATH);
+            stream = new FileInputStream(Configuration.getPath());
             PROPERTIES.load(stream);
             stream.close();
             defaultURL = PROPERTIES.getProperty(ACTION_URL_PROP);
@@ -132,5 +134,9 @@ public final class Configuration {
      */
     public static synchronized long getMaxAge() {
         return maxAge;
+    }
+    
+    public static synchronized String getPath() {
+        return ResourceBundle.getBundle("perseo-core").getString("properties.path");
     }
 }

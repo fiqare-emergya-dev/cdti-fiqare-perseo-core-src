@@ -169,27 +169,23 @@ public class RulesManager {
      */
     public static synchronized Result updateAll(EPServiceProvider epService, String text) {
         try {
-            long maxAge = Configuration.getMaxAge();
+            
             logger.debug(String.format("rule block text: %s",text));
             org.json.JSONArray ja = new JSONArray(text);
             logger.debug(String.format("rules as JSONArray: %s", ja));
             logger.info(String.format("put rules+contexts: %s", ja.length()));
             Map<String, String> newOnes = new LinkedHashMap<String, String>();
             Set<String> oldOnesNames = new HashSet<String>();
-
-            long now = System.currentTimeMillis();
+          
             for (int i = 0; i < ja.length(); i++) {
                 JSONObject jo = ja.getJSONObject(i);
                 String name = jo.optString("name", "");
-                if ("".equals(name.trim())) {
+                String newEpl = jo.optString("text", "");
+                if ("".equals(name.trim()) || "".equals(newEpl.trim())) {
                     return new Result(HttpServletResponse.SC_BAD_REQUEST,
                             "{\"error\":\"missing name\"}");
-                }
-                String newEpl = jo.optString("text", "");
-                if ("".equals(newEpl.trim())) {
-                    return new Result(HttpServletResponse.SC_BAD_REQUEST,
-                            "{\"error\":\"missing text\"}");
-                }
+                }         
+              
                 newOnes.put(name, newEpl);
             }
 
@@ -219,31 +215,34 @@ public class RulesManager {
                     oldOnesNames.remove(n);
                 }
             }
-            //Delete oldOnes if they are old enough
-            for (String o : oldOnesNames) {
-                EPStatement prevStmnt = epService.getEPAdministrator().getStatement(o);
-                logger.debug(String.format("unexpected statement: %s" ,o));
-                if (prevStmnt.getTimeLastStateChange() < now - maxAge) {
-                    logger.debug(String.format("unexpected statement, too old: %s", o));
-                    prevStmnt.destroy();
-                    logger.debug(String.format("deleted garbage statement: %s", o));
-                }
-            }
+            deleteCaducateOldOnes(oldOnesNames,epService);
+            
             return new Result(HttpServletResponse.SC_OK, "{}");
-        } catch (EPException epe) {
+        } catch (EPException  | JSONException epe) {
             logger.error(String.format("creating statement %s", epe));
             return new Result(HttpServletResponse.SC_BAD_REQUEST,
                     String.format("{\"error\":%s}%n",
                             JSONObject.valueToString(epe.getMessage())));
-        } catch (JSONException je) {
-            logger.error(String.format("creating statement %s", je));
-            return new Result(HttpServletResponse.SC_BAD_REQUEST,
-                    String.format("{\"error\":%s}%n",
-                            JSONObject.valueToString(je.getMessage())));
         }
     }
 
-    /**
+    private static void deleteCaducateOldOnes(Set<String> oldOnesNames, EPServiceProvider epService) {
+    	long maxAge = Configuration.getMaxAge();
+    	long now = System.currentTimeMillis();
+    	//Delete oldOnes if they are old enough
+        for (String o : oldOnesNames) {
+            EPStatement prevStmnt = epService.getEPAdministrator().getStatement(o);
+            logger.debug(String.format("unexpected statement: %s" ,o));
+            if (prevStmnt.getTimeLastStateChange() < now - maxAge) {
+                logger.debug(String.format("unexpected statement, too old: %s", o));
+                prevStmnt.destroy();
+                logger.debug(String.format("deleted garbage statement: %s", o));
+            }
+        }
+		
+	}
+
+	/**
      * Delete a rule by name. It does not return an error if the rule does not
      * exist
      *
